@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lock Checker</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #bb86fc;
+            text-align: center;
+        }
+        textarea {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border: 1px solid #333333;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #bb86fc;
+            color: #121212;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 0 5px rgb(255, 0, 191), 0 0 25px cyan;
+            transition: box-shadow 0.3s ease-in-out;
+            margin: 5px;
+        }
+        button:hover {
+            box-shadow: 0 0 5px rgb(255, 0, 0), 
+                        0 0 25px rgb(255, 0, 0), 
+                        0 0 50px rgb(255, 0, 0), 
+                        0 0 100px rgb(255, 0, 0), 
+                        0 0 200px rgb(255, 0, 0);
+        }
+        .copy-button {
+            background-color: #03dac6;
+            color: #121212;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+        .copy-button:hover {
+            background-color: #00ff4c;
+        }
+        p, div {
+            font-size: 16px;
+        }
+        #activeBox, #lockedBox {
+            margin-top: 20px;
+            padding: 10px;
+        }
+        .counter {
+            font-size: 18px;
+            margin: 10px 0;
+            background-color: #1e1e1e;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #333333;
+            width: 100%;
+            max-width: 600px;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e1e1e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #bb86fc;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3700b3;
+        }
+    </style>
+    <script>
+        async function checkStatus(idp, cookie) {
+            const url = `https://graph.facebook.com/${idp}/picture?type=normal`;
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Cookie': cookie
+                    }
+                });
+                const data = await response.text();
+                if (data.includes('Photoshop')) {
+                    return 'Active';
+                } else {
+                    return 'Locked';
+                }
+            } catch (error) {
+                console.error('Error fetching data for ID:', idp, error);
+                return 'Error';
+            }
+        }
+
+        async function processBulkData() {
+            const bulkData = document.getElementById('bulkInput').value.trim().split('\n');
+            const activeBox = document.getElementById('activeBox');
+            const lockedBox = document.getElementById('lockedBox');
+            const activeCount = document.getElementById('activeCount');
+            const lockedCount = document.getElementById('lockedCount');
+
+            activeBox.innerHTML = '';
+            lockedBox.innerHTML = '';
+
+            let activeCounter = 0;
+            let lockedCounter = 0;
+
+            for (let line of bulkData) {
+                const [idp, info, cookie] = line.split('|');
+                const status = await checkStatus(idp, cookie);
+
+                if (status === 'Active') {
+                    activeBox.innerHTML += `${idp}|${info}|${cookie}\n`;
+                    activeCounter++;
+                    activeCount.textContent = activeCounter;
+                } else if (status === 'Locked') {
+                    lockedBox.innerHTML += `${idp}|${info}|${cookie}\n`;
+                    lockedCounter++;
+                    lockedCount.textContent = lockedCounter;
+                }
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = text;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+            alert('Copied to clipboard!');
+        }
+    </script>
+</head>
+<body>
+    <h1>Facebook Bulk Lock Checker</h1>
+    <textarea id="bulkInput" placeholder="format: UID|PASS|COOKIE" rows="10" cols="50"></textarea>
+    <br><br>
+    <button onclick="processBulkData()">Check IDs</button>
+    <br><br>
+    <div class="counter">
+        <strong>Active : </strong><span id="activeCount">0</span>
+    </div>
+    <div class="counter">
+        <strong>Locked : </strong><span id="lockedCount">0</span>
+    </div>
+    <p>Active IDs:</p>
+    <div id="activeBox"></div>
+    <button class="copy-button" onclick="copyToClipboard('activeBox')">Copy Active IDs</button>
+    <p>Locked IDs:</p>
+    <div id="lockedBox"></div>
+    <button class="copy-button" onclick="copyToClipboard('lockedBox')">Copy Locked IDs</button>
+</body>
+</html>
